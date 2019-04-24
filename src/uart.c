@@ -41,7 +41,7 @@ void UART_init()
     SIM->SCGC4 |= SIM_SCGC4_UART0(1);
 
     //PORTA = 1 - PORTA clock enabled
-    SIM->SCGC5 = SIM_SCGC5_PORTA(1);
+    SIM->SCGC5 |= SIM_SCGC5_PORTA(1);
 
     //Configure UART pins
     //MUX = 010 - PTA1 configured as ALT2 UART0_RX
