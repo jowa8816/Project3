@@ -9,51 +9,32 @@
 *
 *****************************************************************************/
 /**
-* @file adc.h
-* @brief An abstraction for the ADC driver
+* @file dma.h
+* @brief An abstraction for the DMA driver
 *
 * This header file provides an abstraction of the functions to
-* implement the ADC driver
+* implement the DMA driver
 *
 * @author Jon Warriner
-* @date April 16 2019
+* @date April 23 2019
 * @version 1.0
 *
 */
 
-#ifndef ADC_H_
-#define ADC_H_
+
+#ifndef DMA_H_
+#define DMA_H_
 
 #include <stdint.h>
 
-//#define ADC_DEBUG
-
 /**
-* @brief Initialize the ADC
+* @brief Initialize the DMA
 *
-* Initialize the ADC for the application
+* Initialize the DMA for the application
 *
 * @return void.
 */
-void ADC_init();
-
-/**
-* @brief Check for conversion complete
-*
-* Poll for conversion complete
-*
-* @return 1 for complete, 0 for not complete.
-*/
-uint8_t ADC_ck_complete();
-
-/**
-* @brief Read ADC conversion result
-*
-* Read from the ADC result register
-*
-* @return conversion result
-*/
-uint16_t ADC_get_result();
+void DMA_init();
 
 
-#endif /* ADC_H_ */
+#endif /* DMA_H_ */

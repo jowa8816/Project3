@@ -10,7 +10,7 @@
 *****************************************************************************/
 /**
 * @file adc.c
-* @brief UART driver
+* @brief ADC driver
 *
 * This source file implements an ADC driver
 *

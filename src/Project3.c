@@ -24,6 +24,7 @@
 #include "clock_config.h"
 #include "adc.h"
 #include "uart.h"
+#include "dma.h"
 #include "led.h"
 #include "MKL25Z4.h"
 
