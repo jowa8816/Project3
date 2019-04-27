@@ -26,19 +26,45 @@
 #include "uart.h"
 #include "dma.h"
 #include "led.h"
+#include "ring.h"
+#include "disp.h"
+#include "peak.h"
 #include "MKL25Z4.h"
 
+//#define PART_2
+//#define PART_3
+//#define PART_4
+#define PART_5
+
+#if defined(PART_2)
 #define TX_BUF_SIZE	32
 
 uint16_t result = 0;
 
 char buf[8] = {0};
+#elif defined(PART_3) || defined(PART_4) || defined(PART_5)
+uint16_t sample_buf[256];
+#define TX_BUF_SIZE	32
+
+ring_t *tx_buf = 0;
+
+disp_t disp = {0};
+
+#if defined(PART_4) || defined(PART_5)
+uint16_t buf_idx = 0;
+#if defined(PART_5)
+peak_t peak = {0};
+#endif
+#endif
+#endif
 
 /*
  * @brief   Application entry point.
  */
 int main(void) {
+#if defined(PART_2) && !defined(ADC_DEBUG)
 	int8_t j = 0;
+#endif
 
   	/* Init board hardware. */
     BOARD_InitBootClocks();
@@ -49,13 +75,29 @@ int main(void) {
     //Initialize the ADC
     ADC_init();
 
+#ifdef PART_3
+    //Initialize the DMA
+    DMA_init((uint16_t *)&ADC0->R[0], sample_buf, sizeof(sample_buf));	//single-buffering in this part, use the whole buffer
+    tx_buf = ring_init(TX_BUF_SIZE);
+
+    //Initialize the display module
+    disp_init(&disp, tx_buf, &UART_EN_TX_INT, sample_buf, sizeof(sample_buf)>>1);
+#elif defined(PART_4) || defined(PART_5)
+    //Initialize the DMA
+    DMA_init((uint16_t *)&ADC0->R[0], &sample_buf[buf_idx], sizeof(sample_buf)>>1);	//double-buffering in this part, use half the buffer
+
+#if defined(PART_5)
+    peak_init(&peak, (int32_t)(0.5 * (1<<pQ)), sizeof(sample_buf)>>2);
+#endif
+#endif
+
     //Initialize UART0
     UART_init();
 
     //just letting this print to the console window to let me know the code started.
     printf("Hello World\n");
 
-#ifdef ADC_DEBUG
+#if defined(PART_2) && defined(ADC_DEBUG)
     //set ADC0 interrupt priority to 0
 #define ADC_PRI	0
     NVIC->IP[_IP_IDX(ADC0_IRQn)]  = ((uint32_t)(NVIC->IP[_IP_IDX(ADC0_IRQn)]  & ~(0xFFUL << _BIT_SHIFT(ADC0_IRQn))) |
@@ -63,15 +105,26 @@ int main(void) {
 
     //enable the ADC IRQ
     NVIC->ISER[0U] = (uint32_t)(1UL << (((uint32_t)(int32_t)ADC0_IRQn) & 0x1FUL));
+#elif defined(PART_3) || defined(PART_4) || defined(PART_5)
+    //set DMA0 interrupt priority to 0
+#define DMA_PRI	0
+    NVIC->IP[_IP_IDX(DMA0_IRQn)]  = ((uint32_t)(NVIC->IP[_IP_IDX(DMA0_IRQn)]  & ~(0xFFUL << _BIT_SHIFT(DMA0_IRQn))) |
+       (((DMA_PRI << (8U - __NVIC_PRIO_BITS)) & (uint32_t)0xFFUL) << _BIT_SHIFT(DMA0_IRQn)));
 
+    //enable the ADC IRQ
+    NVIC->ISER[0U] = (uint32_t)(1UL << (((uint32_t)(int32_t)DMA0_IRQn) & 0x1FUL));
+
+    ADC_en_DMA();	//enable DMA requests from the ADC
 #endif
+
+    ADC_Start();	//time to start sampling
 
     /* Force the counter to be placed into memory. */
     volatile static int i = 0 ;
     /* Enter an infinite loop, just incrementing a counter. */
     while(1) {
         i++;
-#ifndef ADC_DEBUG
+#if defined(PART_2) && !defined(ADC_DEBUG)
         //if a new sample is available grab it from the result register
         //and toggle the LED
         if(ADC_ck_complete())
@@ -94,13 +147,17 @@ int main(void) {
         	UART_TX(buf[j]);
         	j++;
         }
+#elif defined(PART_3)
+        Display_task(&disp);
+#elif defined(PART_5)
+
 #endif
 
     }
     return 0 ;
 }
 
-#ifdef ADC_DEBUG
+#if defined(PART_2) && defined(ADC_DEBUG)
 void ADC0_IRQHandler(void)
 {
 	result = ADC_get_result();
@@ -108,3 +165,52 @@ void ADC0_IRQHandler(void)
 }
 #endif
 
+#if defined(PART_3) || defined(PART_4) || defined(PART_5)
+void DMA0_IRQHandler()
+{
+	//Clear the DONE bit to acknowledge the DMA interrupt
+	DMA_Clear_Done();
+#if defined(PART_3)
+	//Reconfigure source, destination and size to start a new sequence of DMA transfers
+	//In this part we are single-buffering so the destination will always be the beginning of the buffer
+	//and the size will be the full buffer length.
+    DMA_Reconfig((uint16_t *)&ADC0->R[0],sample_buf, sizeof(sample_buf));
+#elif defined(PART_4) || defined(PART_5)
+	//Reconfigure source, destination and size to start a new sequence of DMA transfers
+    //In this part we are double-buffering so the destination will either be the beginning or the middle
+    //of the buffer and the size will be half the buffer.
+    buf_idx = (buf_idx + (sizeof(sample_buf)>>1)) & (sizeof(sample_buf)-1);
+    DMA_Reconfig((uint16_t *)&ADC0->R[0],&sample_buf[buf_idx], sizeof(sample_buf)>>1);
+
+    peak_run(&peak, &sample_buf[(buf_idx + (sizeof(sample_buf)>>1)) & (sizeof(sample_buf)-1)]);
+#endif
+
+    //check timing
+	LED_toggle();
+
+#if defined(PART_3)
+	Display_Trig(&disp);
+#endif
+}
+#endif
+
+#if defined(PART_3) || defined(PART_4) || defined(PART_5)
+void UART0_DriverIRQHandler(void)
+{
+char temp;
+
+	//if the UART is ready to transmit, and we still have data in the buffer, then grab the next character and transmit it.
+	if(UART_TX_rdy())
+	{
+		if(entries(tx_buf) != 0)
+		{
+			extract(tx_buf, &temp);
+			UART_TX(temp);
+		}
+		else
+		{
+			UART_DIS_TX_INT();
+		}
+	}
+}
+#endif

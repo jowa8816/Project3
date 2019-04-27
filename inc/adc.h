@@ -55,5 +55,23 @@ uint8_t ADC_ck_complete();
 */
 uint16_t ADC_get_result();
 
+/**
+* @brief Start the ADC sampling
+*
+* Write to ADCH to start sampling channel 0.  Depending on
+* build config we may also enable interrupts.
+*
+* @return void
+*/
+void ADC_Start();
+
+/**
+* @brief Enable the ADC to generate DMA requests
+*
+* Set DMAEN bit in SC2 to allow ADC to generate DMA requests
+*
+* @return void
+*/
+void ADC_en_DMA();
 
 #endif /* ADC_H_ */

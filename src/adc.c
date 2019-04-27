@@ -52,9 +52,9 @@ void ADC_init()
 	//ACFE = 0 - Compare function disabled
 	//ACFGT = 0 - doesn't matter, compare disabled
 	//ACREN = 0 - range function disabled
-	//DMAEN = 1 - DMA enabled and will assert the ADC DMA request during an ADC conversion complete event
+	//DMAEN = 0 - DMA disabled
 	//REFSEL = 00 - Configure VFEFH and VREFL as reference source
-	ADC0->SC2 = ADC_SC2_DMAEN(0);
+	ADC0->SC2 = 0;
 
 	//ADC Status and Control Register 3
 	//CAL = 0 - Disable CAL
@@ -70,17 +70,17 @@ void ADC_init()
 	// ADLSTS = 00 - Default Longest Sample Time
 	ADC0->CFG2 = 0x00000000;
 
-	// ADC Status and Control Register 1A
-	// Initialize to first channel in sequence
-	//first sample config is at the end of the list
-	//AIEN = 0 - Conversion complete interrupt is disabled
-	//DIFF = 0 - Single-ended conversions and input channels are selected
-	//ADCH = 0000 - DADP0 is selected as input
-#ifdef ADC_DEBUG
-	ADC0->SC1[0] = ADC_SC1_ADCH(0) | ADC_SC1_AIEN(1);	//enable interrupt to check sample rate
-#else
-	ADC0->SC1[0] = ADC_SC1_ADCH(0);
-#endif
+//	// ADC Status and Control Register 1A
+//	// Initialize to first channel in sequence
+//	//first sample config is at the end of the list
+//	//AIEN = 0 - Conversion complete interrupt is disabled
+//	//DIFF = 0 - Single-ended conversions and input channels are selected
+//	//ADCH = 0000 - DADP0 is selected as input
+//#ifdef ADC_DEBUG
+//	ADC0->SC1[0] = ADC_SC1_ADCH(0) | ADC_SC1_AIEN(1);	//enable interrupt to check sample rate
+//#else
+//	//ADC0->SC1[0] = ADC_SC1_ADCH(0);
+//#endif
 
 	//AverageNum = 8
 	//BCT = 25 ADCK
@@ -107,5 +107,31 @@ uint8_t ADC_ck_complete()
 uint16_t ADC_get_result()
 {
 	return((uint16_t)(ADC0->R[0] & 0x0000FFFF));
+}
+
+void ADC_Start()
+{
+	// ADC Status and Control Register 1A
+	// Initialize to first channel in sequence
+	//first sample config is at the end of the list
+	//AIEN = 0 - Conversion complete interrupt is disabled
+	//DIFF = 0 - Single-ended conversions and input channels are selected
+	//ADCH = 0000 - DADP0 is selected as input
+#ifdef ADC_DEBUG
+	ADC0->SC1[0] = ADC_SC1_ADCH(0) | ADC_SC1_AIEN(1);	//enable interrupt to check sample rate
+#else
+	ADC0->SC1[0] = ADC_SC1_ADCH(0);
+#endif
+}
+void ADC_en_DMA()
+{
+	//ADC Status and Control Register 2
+	//ADTRG = 0 - Software Trigger
+	//ACFE = 0 - Compare function disabled
+	//ACFGT = 0 - doesn't matter, compare disabled
+	//ACREN = 0 - range function disabled
+	//DMAEN = 1 - DMA enabled and will assert the ADC DMA request during an ADC conversion complete event
+	//REFSEL = 00 - Configure VFEFH and VREFL as reference source
+	ADC0->SC2 |= ADC_SC2_DMAEN(1);
 }
 

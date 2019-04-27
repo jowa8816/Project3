@@ -26,6 +26,7 @@
 #define DMA_H_
 
 #include <stdint.h>
+#include "MKL25Z4.h"
 
 /**
 * @brief Initialize the DMA
@@ -34,7 +35,33 @@
 *
 * @return void.
 */
-void DMA_init();
+void DMA_init(uint16_t *sbuf, uint16_t *dbuf, uint16_t size);
 
+/**
+* @brief Clear the DONE flag
+*
+* Clear the DONE flag at the end of a set of transfers
+*
+* @return void.
+*/
+__attribute__((always_inline)) static inline void DMA_Clear_Done()
+{
+	DMA0->DMA[0].DSR_BCR = DMA_DSR_BCR_DONE(1);
+}
+
+/**
+* @brief Reconfigure the DMA
+*
+* Reconfigure the DMA to start a new set of transfers
+*
+* @return void.
+*/
+__attribute__((always_inline)) static inline void DMA_Reconfig(uint16_t *sbuf, uint16_t *dbuf, uint16_t size)
+{
+    DMA0->DMA[0].SAR = (uint32_t)sbuf;
+    DMA0->DMA[0].DAR = (uint32_t)dbuf;
+
+    DMA0->DMA[0].DSR_BCR = size;
+}
 
 #endif /* DMA_H_ */
