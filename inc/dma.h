@@ -35,7 +35,7 @@
 *
 * @return void.
 */
-void DMA_init(uint16_t *sbuf, uint16_t *dbuf, uint16_t size);
+void DMA_init(uint16_t *sbuf, int32_t *dbuf, uint16_t size);
 
 /**
 * @brief Clear the DONE flag
@@ -56,7 +56,7 @@ __attribute__((always_inline)) static inline void DMA_Clear_Done()
 *
 * @return void.
 */
-__attribute__((always_inline)) static inline void DMA_Reconfig(uint16_t *sbuf, uint16_t *dbuf, uint16_t size)
+__attribute__((always_inline)) static inline void DMA_Reconfig(uint16_t *sbuf, int32_t *dbuf, uint16_t size)
 {
     DMA0->DMA[0].SAR = (uint32_t)sbuf;
     DMA0->DMA[0].DAR = (uint32_t)dbuf;

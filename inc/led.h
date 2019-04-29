@@ -24,6 +24,8 @@
 #ifndef LED_H_
 #define LED_H_
 
+#include "MKL25Z4.h"
+
 /**
 * @brief Initialize GPIO for LED toggle
 *
@@ -36,6 +38,29 @@ void LED_init();
 *
 * @return void.
 */
-void LED_toggle();
+__attribute__((always_inline)) static inline void LED_toggle()
+{
+	GPIOB->PTOR = (1 << 18);
+}
+
+/**
+* @brief Turn on the LED
+*
+* @return void.
+*/
+__attribute__((always_inline)) static inline void LED_set()
+{
+	GPIOB->PSOR = (1 << 18);
+}
+
+/**
+* @brief Turn off the LED
+*
+* @return void.
+*/
+__attribute__((always_inline)) static inline void LED_clear()
+{
+	GPIOB->PCOR = (1 << 18);
+}
 
 #endif /* LED_H_ */

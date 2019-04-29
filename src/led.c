@@ -20,7 +20,6 @@
 *
 */
 
-#include "MKL25Z4.h"
 #include "led.h"
 
 void LED_init()
@@ -36,10 +35,5 @@ void LED_init()
     //We want PTB18 to be configured as an output
     GPIOB->PDDR |= (1 << 18);
 
-}
-
-void LED_toggle()
-{
-	GPIOB->PTOR = (1 << 18);
 }
 

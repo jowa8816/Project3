@@ -43,18 +43,17 @@ uint16_t result = 0;
 
 char buf[8] = {0};
 #elif defined(PART_3) || defined(PART_4) || defined(PART_5)
-uint16_t sample_buf[256];
+int32_t sample_buf[256];
 #define TX_BUF_SIZE	32
 
 ring_t *tx_buf = 0;
 
 disp_t disp = {0};
 
-#if defined(PART_4) || defined(PART_5)
 uint16_t buf_idx = 0;
+
 #if defined(PART_5)
 peak_t peak = {0};
-#endif
 #endif
 #endif
 
@@ -81,13 +80,22 @@ int main(void) {
     tx_buf = ring_init(TX_BUF_SIZE);
 
     //Initialize the display module
-    disp_init(&disp, tx_buf, &UART_EN_TX_INT, sample_buf, sizeof(sample_buf)>>1);
+    disp_init(&disp, tx_buf, &UART_EN_TX_INT, sample_buf, sizeof(sample_buf)>>2);
 #elif defined(PART_4) || defined(PART_5)
     //Initialize the DMA
     DMA_init((uint16_t *)&ADC0->R[0], &sample_buf[buf_idx], sizeof(sample_buf)>>1);	//double-buffering in this part, use half the buffer
 
-#if defined(PART_5)
-    peak_init(&peak, (int32_t)(0.5 * (1<<pQ)), sizeof(sample_buf)>>2);
+#if defined(PART_4)
+    tx_buf = ring_init(TX_BUF_SIZE);
+
+    //Initialize the display module
+    disp_init(&disp, tx_buf, &UART_EN_TX_INT, sample_buf, sizeof(sample_buf)>>3);
+#elif defined(PART_5)
+    tx_buf = ring_init(TX_BUF_SIZE);
+    //Initialize the display module
+    disp_init_2(&disp, tx_buf, &UART_EN_TX_INT);
+
+    peak_init(&peak, (int32_t)(0.85 * (1<<pQ)), sizeof(sample_buf)>>3);
 #endif
 #endif
 
@@ -147,10 +155,10 @@ int main(void) {
         	UART_TX(buf[j]);
         	j++;
         }
-#elif defined(PART_3)
+#elif defined(PART_3) || defined(PART_4)
         Display_task(&disp);
 #elif defined(PART_5)
-
+        Display_task_2(&disp);
 #endif
 
     }
@@ -168,6 +176,8 @@ void ADC0_IRQHandler(void)
 #if defined(PART_3) || defined(PART_4) || defined(PART_5)
 void DMA0_IRQHandler()
 {
+	LED_set();
+
 	//Clear the DONE bit to acknowledge the DMA interrupt
 	DMA_Clear_Done();
 #if defined(PART_3)
@@ -175,22 +185,34 @@ void DMA0_IRQHandler()
 	//In this part we are single-buffering so the destination will always be the beginning of the buffer
 	//and the size will be the full buffer length.
     DMA_Reconfig((uint16_t *)&ADC0->R[0],sample_buf, sizeof(sample_buf));
+    buf_idx = 0;
 #elif defined(PART_4) || defined(PART_5)
 	//Reconfigure source, destination and size to start a new sequence of DMA transfers
     //In this part we are double-buffering so the destination will either be the beginning or the middle
     //of the buffer and the size will be half the buffer.
-    buf_idx = (buf_idx + (sizeof(sample_buf)>>1)) & (sizeof(sample_buf)-1);
+    buf_idx = (buf_idx + (sizeof(sample_buf)>>3)) & ((sizeof(sample_buf)>>2)-1);
     DMA_Reconfig((uint16_t *)&ADC0->R[0],&sample_buf[buf_idx], sizeof(sample_buf)>>1);
 
-    peak_run(&peak, &sample_buf[(buf_idx + (sizeof(sample_buf)>>1)) & (sizeof(sample_buf)-1)]);
+#if defined(PART_5)
+    //loop through the buffer and compare all values against our current peak value
+    //replace the current peak value if we find something higher
+    peak_run(&peak, &sample_buf[(buf_idx + (sizeof(sample_buf)>>3)) & ((sizeof(sample_buf)>>2)-1)]);
+    //decay the current peak value
+    peak_decay(&peak);
+    //send the current peak value to the display module
+    //thi will trigger a display update
+    Display_New_Val(&disp, peak.peak);
+#endif
 #endif
 
     //check timing
-	LED_toggle();
+//	LED_toggle();
 
-#if defined(PART_3)
-	Display_Trig(&disp);
+#if defined(PART_3) || defined(PART_4)
+	Display_Trig(&disp, buf_idx);
 #endif
+
+	LED_clear();
 }
 #endif
 

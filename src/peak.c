@@ -33,23 +33,7 @@ int32_t peak_init(peak_t *p, int32_t coeff, uint16_t buf_size)
 	p->coeff = coeff;
 	p->num_samps = buf_size;
 	p->peak = 0;
+	p->tmp_peak = 0;
 
 	return(0);
-}
-
-void peak_run(peak_t *p, int32_t *buf)
-{
-	uint16_t i;
-
-	for(i = 0; i < p->num_samps; i++)
-	{
-		if(buf[i] > p->peak)
-		{
-			p->peak = buf[i];
-		}
-		else
-		{
-			p->peak = (p->coeff * p->peak) >> pQ;
-		}
-	}
 }
