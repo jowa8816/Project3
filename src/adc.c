@@ -70,18 +70,6 @@ void ADC_init()
 	// ADLSTS = 00 - Default Longest Sample Time
 	ADC0->CFG2 = 0x00000000;
 
-//	// ADC Status and Control Register 1A
-//	// Initialize to first channel in sequence
-//	//first sample config is at the end of the list
-//	//AIEN = 0 - Conversion complete interrupt is disabled
-//	//DIFF = 0 - Single-ended conversions and input channels are selected
-//	//ADCH = 0000 - DADP0 is selected as input
-//#ifdef ADC_DEBUG
-//	ADC0->SC1[0] = ADC_SC1_ADCH(0) | ADC_SC1_AIEN(1);	//enable interrupt to check sample rate
-//#else
-//	//ADC0->SC1[0] = ADC_SC1_ADCH(0);
-//#endif
-
 	//AverageNum = 8
 	//BCT = 25 ADCK
 	//LSTAdder = 20 ADCK
